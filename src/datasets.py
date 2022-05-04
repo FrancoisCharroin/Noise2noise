@@ -13,7 +13,6 @@ from sys import platform
 import numpy as np
 import random
 from string import ascii_letters
-from PIL import Image, ImageFont, ImageDraw
 import OpenEXR
 
 from matplotlib import rcParams
@@ -58,27 +57,7 @@ class AbstractDataset(Dataset):
         self.crop_size = crop_size
         self.clean_targets = clean_targets
 
-    def _random_crop(self, img_list):
-        """Performs random square crop of fixed size.
-        Works with list so that all items get the same cropped window (e.g. for buffers).
-        """
-
-        w, h = img_list[0].size
-        assert w >= self.crop_size and h >= self.crop_size, \
-            f'Error: Crop size: {self.crop_size}, Image size: ({w}, {h})'
-        cropped_imgs = []
-        i = np.random.randint(0, h - self.crop_size + 1)
-        j = np.random.randint(0, w - self.crop_size + 1)
-
-        for img in img_list:
-            # Resize if dimensions are too small
-            if min(w, h) < self.crop_size:
-                img = tvF.resize(img, (self.crop_size, self.crop_size))
-
-            # Random crop
-            cropped_imgs.append(tvF.crop(img, i, j, self.crop_size, self.crop_size))
-
-        return cropped_imgs
+   
 
 
     def __getitem__(self, index):
