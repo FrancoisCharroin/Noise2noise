@@ -87,11 +87,6 @@ class AbstractDataset(Dataset):
         raise NotImplementedError('Abstract method not implemented!')
 
 
-    def __len__(self):
-        """Returns length of dataset."""
-
-        return len(self.imgs)
-
 
 class NoisyDataset(AbstractDataset):
     """Class for injecting random noise into dataset."""
@@ -144,52 +139,7 @@ class NoisyDataset(AbstractDataset):
         return Image.fromarray(noise_img)
 
 
-    def _add_text_overlay(self, img):
-        """Adds text overlay to images."""
-
-        assert self.noise_param < 1, 'Text parameter is an occupancy probability'
-
-        w, h = img.size
-        c = len(img.getbands())
-
-        # Choose font and get ready to draw
-        if platform == 'linux':
-            serif = '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'
-        else:
-            serif = 'Times New Roman.ttf'
-        text_img = img.copy()
-        text_draw = ImageDraw.Draw(text_img)
-
-        # Text binary mask to compute occupancy efficiently
-        w, h = img.size
-        mask_img = Image.new('1', (w, h))
-        mask_draw = ImageDraw.Draw(mask_img)
-
-        # Random occupancy in range [0, p]
-        if self.seed:
-            random.seed(self.seed)
-            max_occupancy = self.noise_param
-        else:
-            max_occupancy = np.random.uniform(0, self.noise_param)
-        def get_occupancy(x):
-            y = np.array(x, dtype=np.uint8)
-            return np.sum(y) / y.size
-
-        # Add text overlay by choosing random text, length, color and position
-        while 1:
-            font = ImageFont.truetype(serif, np.random.randint(16, 21))
-            length = np.random.randint(10, 25)
-            chars = ''.join(random.choice(ascii_letters) for i in range(length))
-            color = tuple(np.random.randint(0, 255, c))
-            pos = (np.random.randint(0, w), np.random.randint(0, h))
-            text_draw.text(pos, chars, color, font=font)
-
-            # Update mask and check occupancy
-            mask_draw.text(pos, chars, 1, font=font)
-            if get_occupancy(mask_img) > max_occupancy:
-                break
-
-        return text_img
+   
 
 
     def _corrupt(self, img):
@@ -203,28 +153,6 @@ class NoisyDataset(AbstractDataset):
             raise ValueError('Invalid noise type: {}'.format(self.noise_type))
 
 
-    def __getitem__(self, index):
-        """Retrieves image from folder and corrupts it."""
-
-        # Load PIL image
-        img_path = os.path.join(self.root_dir, self.imgs[index])
-        img =  Image.open(img_path).convert('RGB')
-
-        # Random square crop
-        if self.crop_size != 0:
-            img = self._random_crop([img])[0]
-
-        # Corrupt source image
-        tmp = self._corrupt(img)
-        source = tvF.to_tensor(self._corrupt(img))
-
-        # Corrupt target image, but not when clean targets are requested
-        if self.clean_targets:
-            target = tvF.to_tensor(img)
-        else:
-            target = tvF.to_tensor(self._corrupt(img))
-
-        return source, target
 
 
 
