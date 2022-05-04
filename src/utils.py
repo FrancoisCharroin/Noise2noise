@@ -6,12 +6,12 @@ import torch.nn.functional as F
 import torchvision.transforms.functional as tvF
 
 import os
-import numpy as np
-from math import log10
+# import numpy as np
+# from math import log10
 from datetime import datetime
-import OpenEXR
-from PIL import Image
-import Imath
+# import OpenEXR
+# from PIL import Image
+# import Imath
 
 from matplotlib import rcParams
 rcParams['font.family'] = 'serif'
@@ -30,7 +30,9 @@ def clear_line():
 def progress_bar(batch_idx, num_batches, report_interval, train_loss):
     """Neat progress bar to track training."""
 
-    dec = int(np.ceil(np.log10(num_batches)))
+    ## dec = int(np.ceil(np.log10(num_batches))) # tensor.ceil() or tensor
+    dec = int(torch.log10(num_batches).ceil)
+
     bar_size = 21 + dec
     progress = (batch_idx % report_interval) / report_interval
     fill = int(progress * bar_size) + 1
@@ -58,12 +60,15 @@ def show_on_report(batch_idx, num_batches, loss, elapsed):
     """Formats training stats."""
 
     clear_line()
-    dec = int(np.ceil(np.log10(num_batches)))
+   #  dec = int(np.ceil(np.log10(num_batches))) # tensor.ceil() or tensor
+    dec = int(torch.log10(num_batches).ceil)
     print('Batch {:>{dec}d} / {:d} | Avg loss: {:>1.5f} | Avg train time / batch: {:d} ms'.format(batch_idx + 1, num_batches, loss, int(elapsed), dec=dec))
 
 
 def plot_per_epoch(ckpt_dir, title, measurements, y_label):
-    """Plots stats (train/valid loss, avg PSNR, etc.)."""
+    """
+    Plots stats (train/valid loss, avg PSNR, etc.).
+    """
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -80,24 +85,26 @@ def plot_per_epoch(ckpt_dir, title, measurements, y_label):
     plt.close()
 
 
-def load_hdr_as_tensor(img_path):
-    """Converts OpenEXR image to torch float tensor."""
+# The picture we load is already torch here
+# def load_hdr_as_tensor(img_path):
+#     """Converts OpenEXR image to torch float tensor."""
 
-    # Read OpenEXR file
-    if not OpenEXR.isOpenExrFile(img_path):
-        raise ValueError(f'Image {img_path} is not a valid OpenEXR file')
-    src = OpenEXR.InputFile(img_path)
-    pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
-    dw = src.header()['dataWindow']
-    size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)
+#     # Read OpenEXR file
+#     if not OpenEXR.isOpenExrFile(img_path):
+#         raise ValueError(f'Image {img_path} is not a valid OpenEXR file')
+#     src = OpenEXR.InputFile(img_path)
+#     pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
+#     dw = src.header()['dataWindow']
+#     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)
     
-    # Read into tensor
-    tensor = torch.zeros((3, size[1], size[0]))
-    for i, c in enumerate('RGB'):
-        rgb32f = np.fromstring(src.channel(c, pixel_type), dtype=np.float32)
-        tensor[i, :, :] = torch.from_numpy(rgb32f.reshape(size[1], size[0]))
-        
-    return tensor
+#     # Read into tensor
+#     tensor = torch.zeros((3, size[1], size[0]))
+#     for i, c in enumerate('RGB'):
+#         rgb32f = np.fromstring(src.channel(c, pixel_type), dtype=np.float32)
+#         tensor[i, :, :] = torch.from_numpy(rgb32f.reshape(size[1], size[0]))
+#         # x = torch.tensor(list(map(float, src.channel(c, pixel_type).split(' '))), dtype=torch.float32)
+#         # tensor[i, :, :] = x.reshape(size[1], size[0]
+#     return tensor
 
 
 def reinhard_tonemap(tensor):
@@ -107,7 +114,7 @@ def reinhard_tonemap(tensor):
     return torch.pow(tensor / (1 + tensor), 1 / 2.2)
 
 
-def psnr(input, target):
+def psnr(input, target): # This test might already been described in Teacher's statement
     """Computes peak signal-to-noise ratio."""
     
     return 10 * torch.log10(1 / F.mse_loss(input, target))
