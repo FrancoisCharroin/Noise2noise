@@ -13,8 +13,8 @@ from sys import platform
 import numpy as np
 import random
 from string import ascii_letters
-from PIL import Image, ImageFont, ImageDraw
-import OpenEXR
+# from PIL import Image, ImageFont, ImageDraw
+# import OpenEXR
 
 from matplotlib import rcParams
 rcParams['font.family'] = 'serif'
