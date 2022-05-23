@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import 'module.py' as m
 
 ######################################## unet ######################################################
 
@@ -13,10 +13,10 @@ class UNet(nn.Module):
         super(UNet, self).__init__()
 
         # Layers: enc_conv0, enc_conv1, pool1
-        self._block1 = nn.Sequential(
-            nn.Conv2d(in_channels, 48, 3, stride=1, padding=1),
+        self._block1 = m.Sequential(
+            m.Conv2d(in_channels, 48, 3, stride=1, padding=1),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(48, 48, 3, padding=1),
+            m.Conv2d(48, 48, 3, padding=1),
             nn.LeakyReLU(0.1),
             nn.MaxPool2d(2))
 
@@ -27,10 +27,10 @@ class UNet(nn.Module):
             nn.MaxPool2d(2))
 
         # Layers: enc_conv6, upsample5
-        self._block3 = nn.Sequential(
-            nn.Conv2d(48, 48, 3, stride=1, padding=1),
+        self._block3 = m.Sequential(
+            m.Conv2d(48, 48, 3, stride=1, padding=1),
             nn.LeakyReLU(0.1),
-            nn.ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
+            m.TransposeConv2d(48, 48, 3, stride=2, padding=1, output_padding=1))
             #nn.Upsample(scale_factor=2, mode='nearest'))
 
         # Layers: dec_conv5a, dec_conv5b, upsample4
