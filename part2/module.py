@@ -30,6 +30,7 @@ class Conv2d():
         return [(self.weight, self.g_w), (self.bias, self.g_b)]
 
     def forward(self, input):
+        # from the informations of the project
         self.x = input
         
         co = unfold(self.x, kernel_size=self.kernel_size, stride=self.stride)
@@ -68,8 +69,6 @@ class Conv2d():
         dim_inp = (self.x.shape[2], self.x.shape[3])
         return fold(dx_res, dim_inp, kernel_size=self.kernel_size, stride=self.stride)
 
-   
-
 class Sequential():
 
     def __init__(self, *layers):
@@ -77,15 +76,10 @@ class Sequential():
         self.tot_par = []
         
     def param(self):
-        
         self.tot_par = []
-        
         for single_layer in self.all_layers:
-            if (single_layer != Sigmoid) and (single_layer != ReLU):
-                for param in single_layer.param():
-                    
-                    self.tot_par.append(param)
-                
+            for param in single_layer.param():
+                self.tot_par.append(param)
         return self.tot_par
 
     def forward(self, input):
@@ -99,11 +93,8 @@ class Sequential():
             grad = single_layer.backward(grad)
         return grad
 
-
-
-
 class SGD():
-    def __init__(self, params, lr):
+    def __init__(self, params,lr):
         self.params = params
         self.lr = lr
     def param (self):
@@ -112,79 +103,70 @@ class SGD():
     def step(self):
         for [param, g_params] in self.params:
             param.data -= self.lr * g_params
-    def zero_grad(self):
+    def step_grad(self):
         parameters = self.param()
         if parameters:
             for p in parameters:
                 p[1].zero_()
 
     def forward(self, *input):
-        return []
+        return None
 
     def backward(self, *gradwrtoutput):
-        return []
-class ReLU() :
+        return None
 
+class ReLU() :
     def __init__(self):
         self.inp = 0
     def param(self):
         return  []
     def forward (self, input):
-        self.inp = input
-        self.inp[ self.inp < 0 ] = 0
-        return self.inp
+        return torch.max(input, torch.tensor(0.))
 
     def backward (self, x_g):
-        self.grad = x_g * (self.inp > 0)
+        derivative = self.inp > 0
+        self.grad = x_g * derivative
         return self.grad
 
 
 
-class Sigmoid(object):
-
+class Sigmoid():
     def __init__(self):
         self.inp = 0
-
     def forward(self, input):
         self.inp = input
         bottom = 1 + torch.exp(-self.inp)
         sol = 1/bottom
         return sol
-
+    
     def backward(self, grad):
-        
         resu = grad
         bottom = 1 + torch.exp(-self.inp) * (1 - 1 / (1 + torch.exp(-self.inp))) 
         multi = 1/bottom 
-        resu = resu * multi
-        
+        resu = resu * multi  
         return resu
-
     def param(self):
         return  []
-
 class MSE():
-
     def __init__(self):
         super().__init__()
-
+    def param(self):
+        pass
     def forward(self, predic, target):
         self.prediction = predic
         self.target = target
-        square_error = (predic - target)**2
+        self.err = predic - target
+        square_error = (self.err)**2
         self.loss = torch.mean(square_error)
         return self.loss
 
     def backward(self):
-        top = 2 * (self.prediction - self.target)
+        top = 2 * (self.err)
         tot = self.prediction.shape[0]*self.prediction.shape[1]*self.prediction.shape[2]*self.prediction.shape[3]
         bottom = tot
         self.grad = top / bottom
         return self.grad
 
-    def param(self):
-        return []
-    
     
 class NearestUpsampling():
     
@@ -215,23 +197,24 @@ class NearestUpsampling():
                         self.k_0, self.k_1).zero_()
 
     def forward(self, input):
-        # Repeat each axis as specified by size
-        print(input.size())
-        self.x = input.repeat_interleave( 4, dim=3).repeat_interleave( 4, dim=2)
-        print(self.x.size())
+        #upsampling pytorch
+        #print(input.size())
+        self.x = input.repeat_interleave( self.size[1], dim=3).repeat_interleave( self.size[0], dim=2)
+        #print(self.x.size())
         co = unfold(self.x, kernel_size=self.kernel_size, stride=self.stride)
-        print(co.size())
+        #print(co.size())
         res = self.weight.view(self.out_, -1) @ co
-        print(res.size())
+        #print(res.size())
         res += self.bias.view(1, -1, 1)
-        self.H_out = math.floor((self.x.shape[2] - 1*(self.kernel_size[0]-1) -1 )/self.stride) + 1 
-        self.W_out = math.floor((self.x.shape[3] - 1*(self.kernel_size[1]-1) -1 )/self.stride) + 1
-        print(res.view(self.x.shape[0], self.out_, self.H_out , -1).size())
-        return  res.view(self.x.shape[0], self.out_, self.H_out, -1)
+        par_res = self.x.shape[2] - self.k_0
+        par_res = par_res / self.stride
+        par_res = math.floor(par_res)
+        
+        return  res.view(self.x.shape[0], self.out_, par_res + 1, -1)
         
 
     def backward(self, gradwrtoutput):
-        # Down sample input to previous shape
+        
         
         r_grad = gradwrtoutput.permute(1, 2, 3, 0)
         
@@ -252,7 +235,10 @@ class NearestUpsampling():
         
         dim_inp = (self.x.shape[2], self.x.shape[3])
         resul = fold(dx_res, dim_inp, kernel_size=self.kernel_size, stride=self.stride)
+        #print (resul.size(),self.size[0],self.size[1])
+        #downsampling
         resul = resul[:, :, ::self.size[0], ::self.size[1]]
+        #print (resul.size(),self.size[0],self.size[1])
         return resul
     def param(self):
         return [(self.weight, self.g_w), (self.bias, self.g_b)]
