@@ -294,7 +294,7 @@ class UpSampling2D():
     def forward(self, input):
         # Repeat each axis as specified by size
         print(input.size())
-        self.x = input.repeat(1, 1, 4, 4).float()
+        self.x = input.repeat_interleave( 4, dim=3).repeat_interleave( 4, dim=2)
         print(self.x.size())
         co = unfold(self.x, kernel_size=self.kernel_size, stride=self.stride)
         print(co.size())
