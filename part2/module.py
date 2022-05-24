@@ -186,7 +186,7 @@ class MSE():
         return []
     
     
-class UpSampling2D():
+class NearestUpsampling():
     
     def __init__(self,channels_in, channels_out, kernel_size, size=(4,4), stride=1):
         
