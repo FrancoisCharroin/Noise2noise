@@ -46,9 +46,6 @@ class Conv2d():
 
     def backward(self, gradwrtoutput):
        # inspired by https://github.com/eriklindernoren/ML-From-Scratch/blob/master/mlfromscratch/deep_learning/layers.py
-        
-       
-        
         r_grad = gradwrtoutput.permute(1, 2, 3, 0)
         
         r_grad = r_grad.reshape(self.out_, -1)
@@ -68,18 +65,20 @@ class Conv2d():
         
         dim_inp = (self.x.shape[2], self.x.shape[3])
         return fold(dx_res, dim_inp, kernel_size=self.kernel_size, stride=self.stride)
+    def zero_grad(self):
+        self.g_w.zero_()
+        self.g_b.zero_()
 
 class Sequential():
 
     def __init__(self, *layers):
-        self.all_layers = list(layers)
-        self.tot_par = []
-        
+        self.all_layers = layers
     def param(self):
         self.tot_par = []
         for single_layer in self.all_layers:
             for param in single_layer.param():
-                self.tot_par.append(param)
+                self.tot_par.insert(len(self.tot_par),param)
+                
         return self.tot_par
 
     def forward(self, input):
@@ -88,30 +87,24 @@ class Sequential():
         return input
 
     def backward(self , grad):
-        
         for single_layer in reversed(self.all_layers):
             grad = single_layer.backward(grad)
         return grad
+    def zero_grad(self):
+        for layer in self.all_layers:
+            layer.zero_grad()
 
 class SGD():
-    def __init__(self, params,lr):
+    def __init__(self, params ,lr):
         self.params = params
-        self.lr = lr
+        self.lr = lr              
     def param (self):
         return self.params
-
     def step(self):
         for [param, g_params] in self.params:
-            param.data -= self.lr * g_params
-    def step_grad(self):
-        parameters = self.param()
-        if parameters:
-            for p in parameters:
-                p[1].zero_()
-
+            param.data = param.data - self.lr * g_params
     def forward(self, *input):
         return None
-
     def backward(self, *gradwrtoutput):
         return None
 
@@ -128,11 +121,14 @@ class ReLU() :
         self.grad = x_g * derivative
         return self.grad
 
-
+    def zero_grad(self):
+        pass
 
 class Sigmoid():
     def __init__(self):
-        self.inp = 0
+        pass
+    def param(self):
+        return  []
     def forward(self, input):
         self.inp = input
         bottom = 1 + torch.exp(-self.inp)
@@ -145,11 +141,11 @@ class Sigmoid():
         multi = 1/bottom 
         resu = resu * multi  
         return resu
-    def param(self):
-        return  []
+    def zero_grad(self):
+        pass
 class MSE():
     def __init__(self):
-        super().__init__()
+        pass
     def param(self):
         pass
     def forward(self, predic, target):
@@ -235,11 +231,11 @@ class NearestUpsampling():
         
         dim_inp = (self.x.shape[2], self.x.shape[3])
         resul = fold(dx_res, dim_inp, kernel_size=self.kernel_size, stride=self.stride)
-        #print (resul.size(),self.size[0],self.size[1])
         #downsampling
         resul = resul[:, :, ::self.size[0], ::self.size[1]]
-        #print (resul.size(),self.size[0],self.size[1])
         return resul
     def param(self):
         return [(self.weight, self.g_w), (self.bias, self.g_b)]
-    
+    def zero_grad(self):
+        self.g_w.zero_()
+        self.g_b.zero_()
