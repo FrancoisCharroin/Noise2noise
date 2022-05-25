@@ -73,6 +73,7 @@ class Sequential():
     def __init__(self, *layers):
         #Include also acyivation functions
         self.all_layers = layers
+        self.parameters = self.param()
     def zero_grad(self):
         #Put the gradients of the weight and bias to zero
         for layer in self.all_layers:
@@ -83,6 +84,10 @@ class Sequential():
             for param in single_layer.param():
                 self.tot_par.insert(len(self.tot_par),param)
         return self.tot_par
+    
+    def set_param(self, params):
+
+        self.parameters = params
 
     def forward(self, input):
         for single_layer in self.all_layers:
